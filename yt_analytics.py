@@ -5,6 +5,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from tabulate import tabulate
 import pandas as pd
 import pymysql
+from flask import Flask
 
 pymysql.install_as_MySQLdb()
 # import psycopg2 as ps
@@ -53,21 +54,21 @@ if __name__ == '__main__':
         ids='channel==MINE' ,
         startDate='2022-04-01' ,
         endDate='2023-01-20' ,
-        metrics='estimatedMinutesWatched,views,likes,subscribersGained' ,
+        metrics='estimatedMinutesWatched,views,likes,subscribersGained,shares,annotationClickThroughRate,averageViewDuration,videosAddedToPlaylists' ,
         dimensions='day' ,
         sort='day'
         # filters='relatedToVideoId==1'
         # type='video'
     )
-    headers=['date' , 'estimatedMinutesWatched' , 'views' , 'likes' , 'subscribersGained']
+    headers=['date' , 'estimatedMinutesWatched' , 'views' , 'likes' , 'subscribersGained' , "shares" ,
+             "annotationClickThroughRate" , "averageViewDuration" , "videosAddedToPlaylists"]
     # print(result['kind'])
     print(result)
     print(type(result))
     create_table(result['rows'] , headers=headers)
-
     print(tabulate(result['rows'] , headers=headers , tablefmt="pretty"))
-
 # Adding a Block of code for getting a list of columns
+
 i=0
 cols=list()
 for c in result['columnHeaders']:
@@ -77,22 +78,26 @@ for c in result['columnHeaders']:
 # Creating Dataframe with data as result['rows'] and setting the parameters as previously created list 'cols'
 data=pd.DataFrame(result['rows'] , columns=cols)
 data.to_csv(
-    'yt_analytics.csv')  # Exporting dataframe into csv file and naming it as "yt_analytics.csv" as it contains analytical data
+    './yt_analytics.csv')  # Exporting dataframe into csv file and naming it as "yt_analytics.csv" as it contains analytical data
+
+appOne=Flask(__name__)
 
 
-def videos():
-    flow=InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE , SCOPES)
-
-    credentials=flow.run_console()
-    youtube=build(API_SERVICE_NAME , API_VERSION , credentials=credentials)
-
-    request=youtube.videos().list(part="snippet,contentDetails,statistics" , id="Ks-_Mh1QhMc")
-    response=request.execute()
-
-    print(response)
+@appOne.route("/")
+def Index():
+    return "<a href='http://127.0.0.1:1300/youtube_userInsights'>http://127.0.0.1:1300/youtube_userInsights</a>"
 
 
-videos()
+Index()
+
+
+@appOne.route("/youtube_userInsights")
+def yt_insights():
+    return tabulate(result['rows'] , headers=headers , tablefmt="pretty")
+
+
+yt_insights()
 
 if __name__ == '__main__':
     print("YOUTUBE ANALYTICS CODE COMPLETE !!\n CHECK THE .csv FILE!!")
+    appOne.run(port=1300 , host="0.0.0.0")
